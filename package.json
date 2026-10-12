@@ -1,0 +1,22 @@
+{
+  "name": "cyber-nova-3d",
+  "version": "1.0.0",
+  "description": "High-octane 3D Cyberpunk Flight Action Game with Next-Gen Visuals",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "threejs",
+    "webgl",
+    "cyberpunk",
+    "game",
+    "3d"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "three": "^0.160.0"
+  }
+}

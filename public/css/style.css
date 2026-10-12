@@ -1,0 +1,546 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #030108;
+  font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #fff;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* ホログラフィックHUD（走査線・ビネットオーバーレイ） */
+#hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 32px;
+  background: radial-gradient(circle at center, transparent 65%, rgba(0, 5, 20, 0.75) 100%);
+}
+
+/* 走査線エフェクト */
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 11;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  opacity: 0.6;
+}
+
+/* ヘッダーエリア */
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.hud-brand {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #00f3ff;
+  text-shadow: 0 0 12px rgba(0, 243, 255, 0.8), 0 0 24px rgba(0, 243, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-subbrand {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #ff0055;
+  text-shadow: 0 0 8px rgba(255, 0, 85, 0.8);
+}
+
+.score-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.score-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 2px;
+}
+
+.score-value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffe600;
+  letter-spacing: 3px;
+  text-shadow: 0 0 16px rgba(255, 230, 0, 0.8);
+}
+
+.multiplier-tag {
+  font-size: 14px;
+  color: #00f3ff;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: transform 0.15s ease;
+}
+
+.multiplier-tag.bounce {
+  transform: scale(1.4);
+  color: #ff0055;
+}
+
+/* センター警告メッセージ (WARNING / BOSS) */
+#boss-warning {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  animation: pulse-glow 0.8s infinite alternate;
+}
+
+.warning-bar {
+  width: 100vw;
+  height: 48px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #ff0055,
+    #ff0055 20px,
+    #220010 20px,
+    #220010 40px
+  );
+  opacity: 0.85;
+}
+
+.warning-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 8px;
+  text-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055;
+  margin: 12px 0;
+}
+
+@keyframes pulse-glow {
+  0% { transform: translate(-50%, -50%) scale(0.97); filter: brightness(1); }
+  100% { transform: translate(-50%, -50%) scale(1.03); filter: brightness(1.5); }
+}
+
+/* ボスHPバー */
+#boss-hud {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  max-width: 600px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  z-index: 15;
+}
+
+.boss-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: #ff0055;
+  margin-bottom: 6px;
+  text-shadow: 0 0 10px #ff0055;
+}
+
+.boss-hp-container {
+  width: 100%;
+  height: 14px;
+  background: rgba(10, 0, 20, 0.8);
+  border: 1px solid #ff0055;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.boss-hp-bar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff0055, #ffe600);
+  transition: width 0.2s ease;
+  box-shadow: 0 0 12px #ff0055;
+}
+
+/* 照準レティクル */
+#reticle {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(0, 243, 255, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: width 0.1s, height 0.1s, border-color 0.1s;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+}
+
+#reticle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: #00f3ff;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f3ff;
+}
+
+#reticle.locked {
+  border-color: #ff0055;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.8);
+  animation: reticle-lock 0.3s ease infinite alternate;
+}
+
+#reticle.locked::before {
+  background: #ff0055;
+}
+
+@keyframes reticle-lock {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(1.15); }
+}
+
+/* HUD下部エリア (シールド・ブースト・速度計) */
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.gauge-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+}
+
+.gauge-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gauge-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.gauge-bar-outer {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 15, 30, 0.8);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+}
+
+.gauge-bar-inner {
+  height: 100%;
+  width: 100%;
+  transition: width 0.15s ease, background 0.3s;
+}
+
+#shield-bar {
+  background: linear-gradient(90deg, #0088ff, #00f3ff);
+  box-shadow: 0 0 10px #00f3ff;
+}
+
+#shield-bar.danger {
+  background: linear-gradient(90deg, #880022, #ff0055);
+  box-shadow: 0 0 12px #ff0055;
+}
+
+#boost-bar {
+  background: linear-gradient(90deg, #ff8800, #ffe600);
+  box-shadow: 0 0 10px #ffe600;
+}
+
+#overdrive-bar {
+  background: linear-gradient(90deg, #8800ff, #ff00ff);
+  box-shadow: 0 0 10px #ff00ff;
+}
+
+#overdrive-bar.ready {
+  animation: glow-rainbow 0.6s infinite alternate;
+}
+
+@keyframes glow-rainbow {
+  0% { filter: brightness(1) drop-shadow(0 0 4px #00f3ff); }
+  100% { filter: brightness(1.6) drop-shadow(0 0 12px #ff00ff); }
+}
+
+.speedometer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.speed-value {
+  font-size: 38px;
+  font-weight: 900;
+  color: #00f3ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(0, 243, 255, 0.8);
+}
+
+.speed-unit {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 3px;
+}
+
+/* カメラ視点切り替え・設定ボタン */
+.hud-controls-topright {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.hud-btn {
+  background: rgba(0, 15, 30, 0.7);
+  border: 1px solid #00f3ff;
+  color: #00f3ff;
+  padding: 8px 14px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+}
+
+.hud-btn:hover {
+  background: #00f3ff;
+  color: #000;
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* メニュー・ダイアログ (スタート / ポーズ / リザルト) */
+.modal-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(8, 4, 25, 0.88) 0%, rgba(2, 1, 6, 0.96) 100%);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
+.modal-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.main-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  background: linear-gradient(135deg, #00f3ff 20%, #ff00ff 60%, #ffe600 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 25px rgba(0, 243, 255, 0.7));
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.sub-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  letter-spacing: 12px;
+  color: #ff0055;
+  text-shadow: 0 0 12px rgba(255, 0, 85, 0.8);
+}
+
+.menu-card {
+  background: rgba(10, 15, 30, 0.75);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+  border-radius: 8px;
+  padding: 32px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 540px;
+  width: 90%;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00f3ff, #0066ff);
+  color: #fff;
+  border: none;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  padding: 14px 44px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+  width: 100%;
+}
+
+.btn-primary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 35px rgba(0, 243, 255, 0.9);
+  background: linear-gradient(135deg, #33f6ff, #1a75ff);
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 16px;
+}
+
+.key-badge {
+  display: inline-block;
+  background: rgba(0, 243, 255, 0.15);
+  border: 1px solid rgba(0, 243, 255, 0.6);
+  color: #00f3ff;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* スマホ用バーチャル操作 (モバイル対応) */
+#mobile-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  width: 100%;
+  display: none;
+  justify-content: space-between;
+  padding: 0 30px;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+.touch-btn {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: rgba(0, 243, 255, 0.2);
+  border: 2px solid #00f3ff;
+  color: #00f3ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+}
+
+.touch-btn:active {
+  background: #00f3ff;
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .hud-top {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hud-brand {
+    font-size: 16px;
+  }
+  .score-value {
+    font-size: 24px;
+  }
+  .gauge-group {
+    width: 200px;
+  }
+  .main-title {
+    font-size: 32px;
+    letter-spacing: 4px;
+  }
+  .menu-card {
+    padding: 24px;
+  }
+  .instructions-grid {
+    grid-template-columns: 1fr;
+    font-size: 12px;
+  }
+  #mobile-controls {
+    display: flex;
+  }
+}
